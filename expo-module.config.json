@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android", "web"],
+  "ios": {
+    "modules": ["ReactNativeMidiModule"]
+  },
+  "android": {
+    "modules": ["com.motiz88.reactnativemidi.ReactNativeMidiModule"]
+  }
+}

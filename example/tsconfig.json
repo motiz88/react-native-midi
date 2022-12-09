@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@motiz88/react-native-midi": ["../src/index"],
+      "@motiz88/react-native-midi/*": ["../src/*"]
+    }
+  }
+}
