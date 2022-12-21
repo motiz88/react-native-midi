@@ -126,9 +126,6 @@ class ReactNativeMidiModule : Module() {
         }
 
         AsyncFunction("send") { id: Int, portNumber: Int, data: Uint8Array, timestamp: Double?,
-            // Extra parameter to work around Expo bug
-            // Can be cleaned up when https://github.com/expo/expo/pull/20419 ships
-                                _: Int?,
                                 promise: Promise ->
             Log.d("ReactNativeMidiModule", "JS --> send to $id, $portNumber")
             send(id, portNumber, data, timestamp, promise.butFirst { })

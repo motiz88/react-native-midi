@@ -20,10 +20,7 @@ export async function send(
     deviceId,
     portNumber,
     data,
-    timestamp,
-    // Extra parameter to work around Expo bug
-    // Can be cleaned up when https://github.com/expo/expo/pull/20419 ships
-    0
+    timestamp
   );
 }
 

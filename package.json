@@ -34,13 +34,13 @@
   },
   "devDependencies": {
     "@types/jest": "^29.2.4",
-    "@types/react-native": "^0.70.6",
     "@types/react": "^18.0.25",
+    "@types/react-native": "^0.70.6",
     "@types/webmidi": "^2.0.6",
-    "expo-module-scripts": "^3.0.3",
-    "expo-modules-core": "^1.0.3",
-    "jest-expo": "^47.0.1",
-    "jest": "^26.6.3"
+    "expo-module-scripts": "^3.0.4",
+    "expo-modules-core": "^1.0.4",
+    "jest": "^26.6.3",
+    "jest-expo": "^47.0.1"
   },
   "peerDependencies": {
     "expo": "*",
