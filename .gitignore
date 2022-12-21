@@ -62,3 +62,6 @@ android/keystores/debug.keystore
 
 # Local Netlify folder
 .netlify
+
+example/android/
+example/ios/

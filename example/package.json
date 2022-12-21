@@ -11,7 +11,7 @@
     "@bacons/expo-metro-runtime": "^2.0.1",
     "@expo/webpack-config": "^0.17.2",
     "@react-native-picker/picker": "^2.4.8",
-    "expo": "~47.0.8",
+    "expo": "~47.0.9",
     "expo-splash-screen": "~0.17.5",
     "expo-status-bar": "~1.4.2",
     "react": "18.1.0",
