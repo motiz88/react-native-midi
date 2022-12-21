@@ -1,7 +1,7 @@
 {
   "name": "@motiz88/react-native-midi",
-  "version": "0.1.0",
-  "description": "MIDI for React Native",
+  "version": "0.0.1",
+  "description": "A Web MIDI API polyfill for React Native",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
@@ -19,7 +19,8 @@
     "react-native",
     "expo",
     "@motiz88/react-native-midi",
-    "ReactNativeMidi"
+    "ReactNativeMidi",
+    "MIDI"
   ],
   "repository": "https://github.com/motiz88/react-native-midi",
   "bugs": {
@@ -29,17 +30,27 @@
   "license": "MIT",
   "homepage": "https://github.com/motiz88/react-native-midi#readme",
   "dependencies": {
-    "@types/webmidi": "^2.0.6"
+    "event-target-shim": "^6.0.2"
   },
   "devDependencies": {
-    "@types/react": "^18.0.25",
+    "@types/jest": "^29.2.4",
     "@types/react-native": "^0.70.6",
+    "@types/react": "^18.0.25",
+    "@types/webmidi": "^2.0.6",
     "expo-module-scripts": "^3.0.3",
-    "expo-modules-core": "^1.0.3"
+    "expo-modules-core": "^1.0.3",
+    "jest-expo": "^47.0.1",
+    "jest": "^26.6.3"
   },
   "peerDependencies": {
     "expo": "*",
     "react": "*",
     "react-native": "*"
+  },
+  "jest": {
+    "preset": "expo-module-scripts",
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)"
+    ]
   }
 }

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "react-native-midi-example",
+    "name": "React Native MIDI Example",
     "slug": "react-native-midi-example",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -29,7 +29,13 @@
       "package": "com.motiz88.reactnativemidi.example"
     },
     "web": {
+      "bundler": "metro",
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b3f193a4-8777-43f6-a872-23a7f325dad7"
+      }
     }
   }
 }

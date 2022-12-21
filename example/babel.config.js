@@ -1,16 +1,23 @@
-const path = require('path');
+/* eslint-env node */
+
+const path = require("path");
 module.exports = function (api) {
   api.cache(true);
   return {
-    presets: ['babel-preset-expo'],
+    presets: ["babel-preset-expo"],
     plugins: [
       [
-        'module-resolver',
+        "module-resolver",
         {
-          extensions: ['.tsx', '.ts', '.js', '.json'],
+          extensions: [".tsx", ".ts", ".js", ".json"],
           alias: {
             // For development, we want to alias the library to the source
-            '@motiz88/react-native-midi': path.join(__dirname, '..', 'src', 'index.ts'),
+            "@motiz88/react-native-midi": path.join(
+              __dirname,
+              "..",
+              "src",
+              "index.ts"
+            ),
           },
         },
       ],

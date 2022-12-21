@@ -8,16 +8,17 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@miblanchard/react-native-slider": "^2.1.0",
+    "@bacons/expo-metro-runtime": "^2.0.1",
+    "@expo/webpack-config": "^0.17.2",
     "@react-native-picker/picker": "^2.4.8",
     "expo": "~47.0.8",
+    "expo-splash-screen": "~0.17.5",
+    "expo-status-bar": "~1.4.2",
     "react": "18.1.0",
     "react-dom": "18.1.0",
     "react-native": "0.70.5",
     "react-native-web": "~0.18.9",
-    "react-use-promise": "^0.5.0",
-    "expo-splash-screen": "~0.17.5",
-    "expo-status-bar": "~1.4.2"
+    "react-use-promise": "^0.5.0"
   },
   "devDependencies": {
     "@babel/core": "^7.12.9",
