@@ -226,7 +226,11 @@ class ReactNativeMidiModule : Module() {
         val key = Pair(id, portNumber)
         if (!openInputPorts.containsKey(key)) {
             Log.d("ReactNativeMidiModule", "openInputPort $id, $portNumber: opening port")
-            val port = device.openInputPort(portNumber) ?: throw CodedException("INVALID_ACCESS_ERROR", "Failed to open MIDI port", null)
+            val port = device.openInputPort(portNumber) ?: throw CodedException(
+                "INVALID_ACCESS_ERROR",
+                "Failed to open MIDI port",
+                null
+            )
             openInputPorts[key] = port
         } else {
             Log.d("ReactNativeMidiModule", "openInputPort $id, $portNumber: port is already open")
@@ -260,7 +264,11 @@ class ReactNativeMidiModule : Module() {
         val key = Pair(id, portNumber)
         if (!openOutputPorts.containsKey(key)) {
             Log.d("ReactNativeMidiModule", "openOutputPort $id, $portNumber: opening port")
-            val port = device.openOutputPort(portNumber) ?: throw CodedException("INVALID_ACCESS_ERROR", "Failed to open MIDI port", null)
+            val port = device.openOutputPort(portNumber) ?: throw CodedException(
+                "INVALID_ACCESS_ERROR",
+                "Failed to open MIDI port",
+                null
+            )
             Log.d(
                 "ReactNativeMidiModule",
                 "openOutputPort $id, $portNumber: opened"

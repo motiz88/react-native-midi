@@ -49,7 +49,11 @@ class MidiFramer(private val mReceiver: MidiReceiver) : MidiReceiver() {
                             if (mSysExBuffer.size() > 0) {
                                 // Completing a previously incomplete SysEx message - copy into a
                                 // contiguous buffer and send all at once
-                                mSysExBuffer.write(data, sysExStartOffset, offset - sysExStartOffset + 1)
+                                mSysExBuffer.write(
+                                    data,
+                                    sysExStartOffset,
+                                    offset - sysExStartOffset + 1
+                                )
                                 mReceiver.send(
                                     mSysExBuffer.toByteArray(), 0,
                                     mSysExBuffer.size(), timestamp
@@ -102,7 +106,7 @@ class MidiFramer(private val mReceiver: MidiReceiver) : MidiReceiver() {
         }
         // send any unfinished SysEx data
         if (sysExStartOffset in 0 until offset) {
-            mSysExBuffer.write(data,sysExStartOffset, offset-sysExStartOffset)
+            mSysExBuffer.write(data, sysExStartOffset, offset - sysExStartOffset)
         }
     }
 
