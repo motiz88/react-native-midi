@@ -31,7 +31,6 @@ export function MidiPlaygroundArea() {
   const [activeSense, setActiveSense] = useState(false);
   useEffect(() => {
     if (inputPort) {
-      inputPort.open();
       const listener = (event: MIDIMessageEvent) => {
         setMessages((m) =>
           m.concat([
@@ -50,7 +49,6 @@ export function MidiPlaygroundArea() {
       inputPort.addEventListener("midimessage", listener);
       return () => {
         inputPort.removeEventListener("midimessage", listener as any);
-        inputPort.close();
       };
     }
   }, [inputPort, outputPort, echoToOutput]);
