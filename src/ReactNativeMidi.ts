@@ -50,7 +50,7 @@ export function closeOutputPort(deviceId: number, portNumber: number) {
   ReactNativeMidiModule.closeOutputPort(deviceId, portNumber);
 }
 
-export function getDevices(): AndroidDeviceInfo[] {
+export function getDevices(): NativeDeviceInfo[] {
   return ReactNativeMidiModule.getDevices();
 }
 
@@ -62,7 +62,7 @@ export function getMilliTime(): number {
   return ReactNativeMidiModule.getMilliTime();
 }
 
-export enum AndroidPortType {
+export enum NativePortType {
   Input = 1,
   Output = 2,
 }
@@ -74,12 +74,12 @@ export enum AndroidDeviceType {
 }
 
 export type AndroidPortInfo = {
-  type: AndroidPortType;
+  type: NativePortType;
   name: string;
   portNumber: number;
 };
 
-export type AndroidDeviceInfo = {
+type AndroidDeviceInfo = {
   id: number;
   inputPortCount: number;
   outputPortCount: number;
@@ -94,3 +94,19 @@ export type AndroidDeviceInfo = {
   type: AndroidDeviceType;
   ports: AndroidPortInfo[];
 };
+
+type IOSDeviceInfo = {
+  id: number;
+  inputPortCount: number;
+  outputPortCount: number;
+  isPrivate: boolean | void;
+  properties: {
+    manufacturer: string;
+    name: string;
+    model?: string;
+    device_id: string | void;
+  };
+  ports: AndroidPortInfo[];
+};
+
+export type NativeDeviceInfo = AndroidDeviceInfo | IOSDeviceInfo;

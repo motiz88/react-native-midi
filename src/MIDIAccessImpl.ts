@@ -5,7 +5,7 @@ import { MIDIInputImpl } from "./MIDIInputImpl";
 import { MIDIOutput } from "./MIDIOutput";
 import { MIDIOutputImpl } from "./MIDIOutputImpl";
 import { MIDIPortImpl } from "./MIDIPortImpl";
-import { AndroidDeviceInfo, AndroidPortType } from "./ReactNativeMidi";
+import { NativeDeviceInfo, NativePortType } from "./ReactNativeMidi";
 import * as ReactNativeMidi from "./ReactNativeMidi";
 import { SimpleEventTargetImpl } from "./SimpleEventTargetImpl";
 
@@ -21,10 +21,10 @@ export class MIDIAccessImpl
     this.setEventAttributeValue("statechange", value);
   }
 
-  readonly #devices: Map<number, Readonly<AndroidDeviceInfo>> = new Map();
+  readonly #devices: Map<number, Readonly<NativeDeviceInfo>> = new Map();
 
   private addDevice(
-    deviceInfo: Readonly<AndroidDeviceInfo>,
+    deviceInfo: Readonly<NativeDeviceInfo>,
     fireEvents: boolean
   ) {
     this.#devices.set(deviceInfo.id, deviceInfo);
@@ -32,7 +32,8 @@ export class MIDIAccessImpl
       const portId = MIDIPortImpl.getID(deviceInfo, portInfo);
       let port: MIDIPortImpl;
       // NOTE: Android port "types" are from the peripheral's perspective, i.e. inverted
-      if (portInfo.type === AndroidPortType.Input) {
+      // We follow the same convention on iOS
+      if (portInfo.type === NativePortType.Input) {
         const output = new MIDIOutputImpl(
           deviceInfo,
           portInfo,
@@ -55,13 +56,14 @@ export class MIDIAccessImpl
     }
   }
 
-  private removeDevice(deviceInfo: Readonly<AndroidDeviceInfo>) {
+  private removeDevice(deviceInfo: Readonly<NativeDeviceInfo>) {
     this.#devices.delete(deviceInfo.id);
     for (const portInfo of deviceInfo.ports) {
       const portId = MIDIPortImpl.getID(deviceInfo, portInfo);
       let port: MIDIPortImpl | void;
       // NOTE: Android port "types" are from the peripheral's perspective, i.e. inverted
-      if (portInfo.type === AndroidPortType.Input) {
+      // We follow the same convention on iOS
+      if (portInfo.type === NativePortType.Input) {
         const output = this.#outputs.get(portId);
         if (output) {
           port = output;
@@ -84,14 +86,13 @@ export class MIDIAccessImpl
 
   constructor(public readonly sysexEnabled: boolean) {
     super();
-
     for (const device of ReactNativeMidi.getDevices()) {
       this.addDevice(device, false);
     }
 
     ReactNativeMidi.emitter.addListener(
       "onMidiDeviceAdded",
-      (device: AndroidDeviceInfo) => {
+      (device: NativeDeviceInfo) => {
         // TODO: If possible, reuse port instances across reconnections
         this.addDevice(device, /* fireEvents */ true);
       }

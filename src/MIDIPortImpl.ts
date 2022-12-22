@@ -4,7 +4,7 @@ import { InvalidAccessError } from "./InvalidAccessError";
 import { MIDIConnectionEvent } from "./MIDIConnectionEvent";
 import { MIDIPort } from "./MIDIPort";
 import * as ReactNativeMidi from "./ReactNativeMidi";
-import { AndroidDeviceInfo, AndroidPortInfo } from "./ReactNativeMidi";
+import { NativeDeviceInfo, AndroidPortInfo } from "./ReactNativeMidi";
 import { SimpleEventTargetImpl } from "./SimpleEventTargetImpl";
 
 export abstract class MIDIPortImpl
@@ -12,7 +12,7 @@ export abstract class MIDIPortImpl
   implements MIDIPort
 {
   constructor(
-    protected deviceInfo: Readonly<AndroidDeviceInfo>,
+    protected deviceInfo: Readonly<NativeDeviceInfo>,
     protected portInfo: Readonly<AndroidPortInfo>,
     protected readonly sysExEnabled: boolean
   ) {
@@ -28,7 +28,7 @@ export abstract class MIDIPortImpl
   }
 
   static getID(
-    deviceInfo: Readonly<AndroidDeviceInfo>,
+    deviceInfo: Readonly<NativeDeviceInfo>,
     portInfo: Readonly<AndroidPortInfo>
   ) {
     return String(deviceInfo.id + "-" + portInfo.portNumber);
@@ -45,13 +45,17 @@ export abstract class MIDIPortImpl
   get name(): string {
     return (
       this.deviceInfo.properties.name ??
-      this.deviceInfo.properties.product ??
+      ("product" in this.deviceInfo.properties
+        ? this.deviceInfo.properties.product
+        : null) ??
       ""
     );
   }
 
   get version(): string {
-    return this.deviceInfo.properties.version;
+    return "version" in this.deviceInfo.properties
+      ? this.deviceInfo.properties.version
+      : "";
   }
 
   async open(): Promise<void> {

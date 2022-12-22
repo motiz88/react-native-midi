@@ -68,6 +68,7 @@ export class MIDIInputImpl extends MIDIPortImpl implements MIDIInput {
         if (!this.sysExEnabled && data[0] === 0xf0) {
           return;
         }
+        console.log("received", data);
         this.dispatchEvent(
           new MIDIMessageEvent("midimessage", {
             data: Uint8Array.from(data),
