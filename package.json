@@ -2,6 +2,9 @@
   "name": "@motiz88/react-native-midi",
   "version": "0.0.1",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "A Web MIDI API polyfill for React Native",
   "main": "build/index.js",
   "types": "build/index.d.ts",
