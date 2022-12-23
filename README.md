@@ -4,9 +4,9 @@ An experimental [Web MIDI API](https://developer.mozilla.org/en-US/docs/Web/API/
 
 # Features
 
-- [x] Android support
-- [x] Web support
-- [ ] iOS support
+- [x] Android support (via `android.media.midi`)
+- [x] iOS support (via Core MIDI)
+- [x] Web support (on browsers that support the Web MIDI API)
 - [ ] Bluetooth scanning, virtual ports, and other nonstandard capabilities
 
 # API
@@ -32,7 +32,13 @@ Refer to the [Web MIDI API docs](https://developer.mozilla.org/en-US/docs/Web/AP
 If using Expo: `expo install @motiz88/react-native-midi`
 Otherwise: `npm install @motiz88/react-native-midi`
 
-<!-- TODO: Add iOS installation instructions when we have iOS support. -->
+## Configure for iOS
+
+Run `npx pod-install` after installing the npm package.
+
+## Configure for Android
+
+No additional setup necessary.
 
 # Contributing
 
