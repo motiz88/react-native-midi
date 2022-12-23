@@ -30,12 +30,10 @@ export class MIDIInputImpl extends MIDIPortImpl implements MIDIInput {
   }
 
   protected override onAddedListener(type: string): void {
-    console.log("added listener for", type);
     if (type !== "midimessage") {
       return;
     }
     if (this.connection !== "open") {
-      console.log("implicit open!");
       this.open().catch(() => {
         /* ignore rejection */
       });
@@ -43,7 +41,6 @@ export class MIDIInputImpl extends MIDIPortImpl implements MIDIInput {
   }
 
   protected override onAddedFirstListener(type: string): void {
-    console.log("added first listener for", type);
     if (type !== "midimessage") {
       return;
     }
@@ -68,7 +65,6 @@ export class MIDIInputImpl extends MIDIPortImpl implements MIDIInput {
         if (!this.sysExEnabled && data[0] === 0xf0) {
           return;
         }
-        console.log("received", data);
         this.dispatchEvent(
           new MIDIMessageEvent("midimessage", {
             data: Uint8Array.from(data),
@@ -84,7 +80,6 @@ export class MIDIInputImpl extends MIDIPortImpl implements MIDIInput {
     if (type !== "midimessage") {
       return;
     }
-    console.log('removed last listener for "midimessage"');
     this.#midiMessageSubscription!.remove();
     this.#midiMessageSubscription = null;
   }

@@ -69,12 +69,10 @@ class ReactNativeMidiModule : Module() {
         )
 
         OnStartObserving {
-            Log.d("ReactNativeMidiModule", "OnStartObserving")
             midiManager!!.registerDeviceCallback(deviceListener, null)
         }
 
         OnStopObserving {
-            Log.d("ReactNativeMidiModule", "OnStopObserving")
             midiManager!!.unregisterDeviceCallback(deviceListener)
             for (id in openDevices.keys) {
                 closeDeviceById(id)
@@ -84,66 +82,54 @@ class ReactNativeMidiModule : Module() {
         Name("ReactNativeMidi")
 
         AsyncFunction("requestMIDIAccess") {
-            Log.d("ReactNativeMidiModule", "JS --> requestMIDIAccess")
             appContext.reactContext?.packageManager?.hasSystemFeature(PackageManager.FEATURE_MIDI) == true
         }
 
         Function("getDevices") {
-            Log.d("ReactNativeMidiModule", "JS --> getDevices")
             midiManager?.devices?.map { device ->
                 serializeDeviceInfo(device)
             }
         }
 
         AsyncFunction("openDevice") { id: Int, promise: Promise ->
-            Log.d("ReactNativeMidiModule", "JS --> openDevice $id")
             openDevice(id, promise.butFirst { })
         }
 
         Function("closeDevice") { id: Int ->
-            Log.d("ReactNativeMidiModule", "JS --> closeDevice $id")
             closeDeviceById(id)
         }
 
         AsyncFunction("openInputPort") { id: Int, portNumber: Int, promise: Promise ->
-            Log.d("ReactNativeMidiModule", "JS --> openInputPort $id, $portNumber")
             openInputPort(id, portNumber, promise.butFirst { })
         }
 
         Function("closeInputPort") { id: Int, portNumber: Int ->
-            Log.d("ReactNativeMidiModule", "JS --> closeInputPort $id, $portNumber")
             closeInputPort(id, portNumber)
         }
 
         AsyncFunction("openOutputPort") { id: Int, portNumber: Int, promise: Promise ->
-            Log.d("ReactNativeMidiModule", "JS --> openOutputPort $id, $portNumber")
             openOutputPort(id, portNumber, promise.butFirst { })
         }
 
         Function("closeOutputPort") { id: Int, portNumber: Int ->
-            Log.d("ReactNativeMidiModule", "JS --> closeOutputPort $id, $portNumber")
             closeOutputPort(id, portNumber)
         }
 
         AsyncFunction("send") { id: Int, portNumber: Int, data: Uint8Array, timestamp: Double?,
                                 promise: Promise ->
-            Log.d("ReactNativeMidiModule", "JS --> send to $id, $portNumber")
             send(id, portNumber, data, timestamp, promise.butFirst { })
         }
 
         Function("flush") { id: Int, portNumber: Int ->
-            Log.d("ReactNativeMidiModule", "JS --> flush $id, $portNumber")
             flush(id, portNumber)
         }
 
         Function("getMilliTime") {
-            Log.d("ReactNativeMidiModule", "JS --> getMilliTime")
             System.nanoTime() / 1000000.0
         }
     }
 
     private fun openDevice(id: Int, promise: Promise) {
-        Log.d("ReactNativeMidiModule", "openDevice $id")
         val device = openDevices[id]
         if (device != null) {
             promise.resolve(device)
@@ -187,12 +173,10 @@ class ReactNativeMidiModule : Module() {
     )
 
     private fun closeOutputPort(id: Int, portNumber: Int) {
-        Log.d("ReactNativeMidiModule", "closeOutputPort $id, $portNumber")
         openOutputPorts.remove(Pair(id, portNumber))?.close()
     }
 
     private fun flush(id: Int, portNumber: Int) {
-        Log.d("ReactNativeMidiModule", "flush $id, $portNumber")
         // TODO: "The implementation will need to ensure the MIDI stream is left in a good state,
         // so if the output port is in the middle of a sysex message, a sysex termination byte (0xf7)
         // should be sent."
@@ -201,77 +185,47 @@ class ReactNativeMidiModule : Module() {
 
 
     private fun openInputPort(id: Int, portNumber: Int, promise: Promise) {
-        Log.d("ReactNativeMidiModule", "openInputPort $id, $portNumber")
         if (openDevices.containsKey(id)) {
-            Log.d(
-                "ReactNativeMidiModule",
-                "openInputPort $id, $portNumber: device is already open, opening port"
-            )
             promise.resolveUsing { openInputPort(id, portNumber) }
         } else {
-            Log.d("ReactNativeMidiModule", "openInputPort $id, $portNumber: device is not open")
             openDevice(id, promise.butFirst {
-                Log.d(
-                    "ReactNativeMidiModule",
-                    "openInputPort $id, $portNumber: done opening device, opening port"
-                )
                 openInputPort(id, portNumber)
             })
         }
     }
 
     private fun openInputPort(id: Int, portNumber: Int): MidiInputPort {
-        Log.d("ReactNativeMidiModule", "openInputPort $id, $portNumber: asserting device is open")
         val device = openDevices[id]!!
         val key = Pair(id, portNumber)
         if (!openInputPorts.containsKey(key)) {
-            Log.d("ReactNativeMidiModule", "openInputPort $id, $portNumber: opening port")
             val port = device.openInputPort(portNumber) ?: throw CodedException(
                 "INVALID_ACCESS_ERROR",
                 "Failed to open MIDI port",
                 null
             )
             openInputPorts[key] = port
-        } else {
-            Log.d("ReactNativeMidiModule", "openInputPort $id, $portNumber: port is already open")
         }
         return openInputPorts[key]!!
     }
 
     private fun openOutputPort(id: Int, portNumber: Int, promise: Promise) {
-        Log.d("ReactNativeMidiModule", "openOutputPort $id, $portNumber")
         if (openDevices.containsKey(id)) {
-            Log.d(
-                "ReactNativeMidiModule",
-                "openOutputPort $id, $portNumber: device is already open, opening port"
-            )
             promise.resolveUsing { openOutputPort(id, portNumber) }
         } else {
-            Log.d("ReactNativeMidiModule", "openOutputPort $id, $portNumber: device is not open")
             openDevice(id, promise.butFirst {
-                Log.d(
-                    "ReactNativeMidiModule",
-                    "openOutputPort $id, $portNumber: done opening device, opening port"
-                )
                 openOutputPort(id, portNumber)
             })
         }
     }
 
     private fun openOutputPort(id: Int, portNumber: Int): MidiOutputPort {
-        Log.d("ReactNativeMidiModule", "openOutputPort $id, $portNumber: asserting device is open")
         val device = openDevices[id]!!
         val key = Pair(id, portNumber)
         if (!openOutputPorts.containsKey(key)) {
-            Log.d("ReactNativeMidiModule", "openOutputPort $id, $portNumber: opening port")
             val port = device.openOutputPort(portNumber) ?: throw CodedException(
                 "INVALID_ACCESS_ERROR",
                 "Failed to open MIDI port",
                 null
-            )
-            Log.d(
-                "ReactNativeMidiModule",
-                "openOutputPort $id, $portNumber: opened"
             )
 
             port.connect(MidiFramer(object : MidiReceiver() {
@@ -289,13 +243,7 @@ class ReactNativeMidiModule : Module() {
                     )
                 }
             }))
-            Log.d(
-                "ReactNativeMidiModule",
-                "openOutputPort $id, $portNumber: connected"
-            )
             openOutputPorts[key] = port
-        } else {
-            Log.d("ReactNativeMidiModule", "openOutputPort $id, $portNumber: port already open")
         }
         return openOutputPorts[key]!!
     }
@@ -307,30 +255,14 @@ class ReactNativeMidiModule : Module() {
         timestamp: Double?,
         promise: Promise
     ) {
-        Log.d(
-            "ReactNativeMidiModule",
-            "send $id, $portNumber"
-        )
         val key = Pair(id, portNumber)
         if (openInputPorts.containsKey(key)) {
-            Log.d(
-                "ReactNativeMidiModule",
-                "send $id, $portNumber: port is already open"
-            )
             promise.resolveUsing { send(id, portNumber, data, timestamp) }
         } else {
-            Log.d(
-                "ReactNativeMidiModule",
-                "send $id, $portNumber: port is not open"
-            )
             openInputPort(
                 id,
                 portNumber,
                 promise.butFirst {
-                    Log.d(
-                        "ReactNativeMidiModule",
-                        "send $id, $portNumber: done opening port, attempting to send"
-                    )
                     send(id, portNumber, data, timestamp)
                 })
         }
@@ -343,25 +275,13 @@ class ReactNativeMidiModule : Module() {
         timestamp: Double?
     ) {
         val key = Pair(id, portNumber)
-        Log.d(
-            "ReactNativeMidiModule",
-            "send $id, $portNumber: asserting port is open"
-        )
         val port = openInputPorts[key]!!
         val bytes = ByteArray(data.byteLength)
         data.toDirectBuffer().get(bytes)
-        Log.d(
-            "ReactNativeMidiModule",
-            "send $id, $portNumber: writing to port"
-        )
         port.send(bytes, 0, bytes.size, ((timestamp ?: 0.0) * 1000000.0).toLong())
     }
 
     private fun closeInputPort(id: Int, portNumber: Int) {
-        Log.d(
-            "ReactNativeMidiModule",
-            "closeInputPort $id, $portNumber: closing and removing port (if it exists)"
-        )
         openInputPorts.remove(Pair(id, portNumber))?.close()
     }
 
@@ -371,10 +291,6 @@ class ReactNativeMidiModule : Module() {
 
     private val deviceListener = object : MidiManager.DeviceCallback() {
         override fun onDeviceAdded(device: MidiDeviceInfo) {
-            Log.d(
-                "ReactNativeMidiModule",
-                "onDeviceAdded ${device.id}"
-            )
             this@ReactNativeMidiModule.sendEvent(
                 MIDI_DEVICE_ADDED_EVENT_NAME,
                 serializeDeviceInfo(device)
@@ -382,10 +298,6 @@ class ReactNativeMidiModule : Module() {
         }
 
         override fun onDeviceRemoved(device: MidiDeviceInfo) {
-            Log.d(
-                "ReactNativeMidiModule",
-                "onDeviceRemoved ${device.id}"
-            )
             closeDeviceById(device.id)
             this@ReactNativeMidiModule.sendEvent(
                 MIDI_DEVICE_REMOVED_EVENT_NAME,
@@ -395,10 +307,6 @@ class ReactNativeMidiModule : Module() {
     }
 
     private fun closeDeviceById(id: Int) {
-        Log.d(
-            "ReactNativeMidiModule",
-            "closeDeviceById $id"
-        )
         openDevices.remove(id)?.close()
         openInputPorts.keys.removeAll { it.first == id }
         openOutputPorts.keys.removeAll { it.first == id }
