@@ -16,7 +16,7 @@ An experimental [Web MIDI API](https://developer.mozilla.org/en-US/docs/Web/API/
 Equivalent to [`Navigator.requestMIDIAccess`](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMIDIAccess) in the Web MIDI API. Respects the `sysex` option.
 
 ```typescript
-import { requestMIDIAccess } from "motiz88/react-native-midi";
+import { requestMIDIAccess } from "@motiz88/react-native-midi";
 
 requestMIDIAccess().then((midiAccess) => {
   // Use midiAccess.inputs and midiAccess.outputs
