@@ -6,39 +6,46 @@ let MIDI_DEVICE_REMOVED_EVENT_NAME = "onMidiDeviceRemoved"
 let MIDI_MESSAGE_RECEIVED_EVENT_NAME = "onMidiMessageReceived"
 
 public class ReactNativeMidiModule: Module {
+
+    private func addDevice(device: MIDIDevice) {
+        sendEvent(MIDI_DEVICE_ADDED_EVENT_NAME, ReactNativeMidiModule.serializeDeviceInfo(device: device))
+    }
+
+    private func removeDevice(device: MIDIDevice) {
+        sendEvent(MIDI_DEVICE_REMOVED_EVENT_NAME, ["id": device.properties![MIDIObject.Property.uniqueID]])
+    }
+
     private func receive(notice: MIDINotice) {
         switch notice {
-        case let .objectAdded(_, child):
-            if let device = child as? MIDIDevice {
-                sendEvent(MIDI_DEVICE_ADDED_EVENT_NAME, ReactNativeMidiModule.serializeDeviceInfo(device: device))
+        case let .objectAdded(_, device as MIDIDevice):
+            // NOTE: I haven't seen this event fire in practice with MIDIDevice as the child.
+            let offline = device.properties![MIDIObject.Property.offline] as? Int
+            if (offline == nil || offline == 0) {
+                addDevice(device: device)
             }
-        case let .objectRemoved(_, child):
-            if let device = child as? MIDIDevice {
-                sendEvent(MIDI_DEVICE_REMOVED_EVENT_NAME, ["id": device.properties![MIDIObject.Property.uniqueID]])
+            break;
+        case let .objectRemoved(_, device as MIDIDevice):
+            // NOTE: I haven't seen this event fire in practice with MIDIDevice as the child.
+            removeDevice(device: device)
+            break;
+        case let .propertyChanged(device as MIDIDevice, MIDIObject.Property.offline):
+            let offline = device.properties![MIDIObject.Property.offline] as! Int
+            if (offline == 0) {
+                addDevice(device: device)
+            } else {
+                removeDevice(device: device)
             }
-        // TODO: Handle property changes?
+            break;
+        // TODO: Handle other property changes?
         // TODO: Handle individual endpoints being added/removed?
-        default: break
+        default:
+            break
         }
     }
 
-    private lazy var client: MIDIClient? = {
-        do {
-            return try MIDIClient(name: "Default client", callback: self.receive)
-        } catch {
-            print(error)
-            return nil
-        }
-    }()
+    private var client: MIDIClient?
 
-    private lazy var output: MIDIOutput? = {
-        do {
-            return try client?.createOutput(name: "Default output")
-        } catch {
-            print(error)
-            return nil
-        }
-    }()
+    private var output: MIDIOutput?
 
     private func openDevice(id _: Int32, promise: Promise) {
         promise.resolve(nil)
@@ -71,7 +78,12 @@ public class ReactNativeMidiModule: Module {
     }
 
     private func getDevices() -> [[String: Any?]] {
-        return MIDIDevice.all.map(ReactNativeMidiModule.serializeDeviceInfo)
+        return MIDIDevice.all
+            // iOS reports *every device ever seen* as "offline".
+            // In Web MIDI terms we interpret "offline" as "disconnected", and disconnected
+            // ports should not be listed in MIDIAccess, so just filter them out.
+            .filter {$0.properties![MIDIObject.Property.offline] as? Int != 1 }
+            .map(ReactNativeMidiModule.serializeDeviceInfo)
     }
 
     private func closeDevice(id: Int32) {
@@ -98,21 +110,30 @@ public class ReactNativeMidiModule: Module {
     private var openSourcePorts: [Int32: SourcePort] = [:]
 
     private func openOutputPort(id: Int32, portNumber: Int32, promise: Promise) {
-        do {
-            if openSourcePorts[portNumber] == nil {
-                let source = MIDISource.find(with: MIDIUniqueID(portNumber))
-                openSourcePorts[portNumber] = try SourcePort(with: client!, source: source!) { data, timestamp in
-                    self.sendEvent(MIDI_MESSAGE_RECEIVED_EVENT_NAME, [
-                        "id": id,
-                        "portNumber": portNumber,
-                        "data": Array(data),
-                        "timestamp": Double(timestamp) / 1_000_000.0,
-                    ])
+        let doOpen = { [self] in
+            do {
+                if openSourcePorts[portNumber] == nil {
+                    let source = MIDISource.find(with: MIDIUniqueID(portNumber))
+                    openSourcePorts[portNumber] = try SourcePort(with: client!, source: source!) { data, timestamp in
+                        self.sendEvent(MIDI_MESSAGE_RECEIVED_EVENT_NAME, [
+                            "id": id,
+                            "portNumber": portNumber,
+                            "data": Array(data),
+                            "timestamp": Double(timestamp) / 1_000_000.0,
+                        ])
+                    }
                 }
+                promise.resolve(nil)
+            } catch {
+                promise.reject(error)
             }
-            promise.resolve(nil)
-        } catch {
-            promise.reject(error)
+        }
+        if (client != nil) {
+            doOpen()
+            return
+        } else {
+            // Assume there is a concurrent requestMidiAccess() call in progress and get in the queue behind it.
+            DispatchQueue.main.async(execute: doOpen)
         }
     }
 
@@ -121,18 +142,26 @@ public class ReactNativeMidiModule: Module {
     }
 
     private func send(id _: Int32, portNumber: Int32, message: Uint8Array, timestamp: Double?, promise: Promise) {
-        do {
-            let destination = MIDIDestination.find(with: MIDIUniqueID(portNumber))
-            let uint8Ptr = message.rawPointer.bindMemory(to: UInt8.self, capacity: message.length)
-            let uint8Buf = UnsafeBufferPointer(start: uint8Ptr, count: message.length)
-            // TODO: Long messages (break into multiple packets?)
-            let midiTimestamp = UInt64(((timestamp != nil) ? (timestamp! * 1_000_000.0) : 0).rounded())
-            try output!.send(
-                bytes: Array(uint8Buf), timestamp: midiTimestamp, to: destination!
-            )
-            promise.resolve(nil)
-        } catch {
-            promise.reject(error)
+        let doSend = { [self] in
+            do {
+                let destination = MIDIDestination.find(with: MIDIUniqueID(portNumber))
+                let uint8Ptr = message.rawPointer.bindMemory(to: UInt8.self, capacity: message.length)
+                let uint8Buf = UnsafeBufferPointer(start: uint8Ptr, count: message.length)
+                // TODO: Long messages (break into multiple packets?)
+                let midiTimestamp = UInt64(((timestamp != nil) ? (timestamp! * 1_000_000.0) : 0).rounded())
+                try output!.send(
+                    bytes: Array(uint8Buf), timestamp: midiTimestamp, to: destination!
+                )
+                promise.resolve(nil)
+            } catch {
+                promise.reject(error)
+            }
+        }
+        if (output != nil) {
+            doSend()
+        } else {
+            // Assume there is a concurrent requestMidiAccess() call in progress and get in the queue behind it.
+            DispatchQueue.main.async(execute: doSend)
         }
     }
 
@@ -144,14 +173,29 @@ public class ReactNativeMidiModule: Module {
         try destination!.flushOutput()
     }
 
+    private func requestMIDIAccess(promise: Promise) {
+        DispatchQueue.main.async { [self] in
+            do {
+                if (client != nil) {
+                    promise.resolve(true)
+                    return
+                }
+                client = try MIDIClient(name: "@motiz88/react-native-midi", callback: self.receive)
+                output = try client!.createOutput(name: "@motiz88/react-native-midi output")
+            } catch {
+                promise.reject(error)
+                return
+            }
+            promise.resolve(true)
+        }
+    }
+
     public func definition() -> ModuleDefinition {
         Name("ReactNativeMidi")
 
         Events(MIDI_DEVICE_ADDED_EVENT_NAME, MIDI_DEVICE_REMOVED_EVENT_NAME, MIDI_MESSAGE_RECEIVED_EVENT_NAME)
 
-        AsyncFunction("requestMIDIAccess") {
-            client != nil
-        }
+        AsyncFunction("requestMIDIAccess", requestMIDIAccess)
 
         Function("getDevices", getDevices)
 
