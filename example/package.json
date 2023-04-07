@@ -9,22 +9,20 @@
   },
   "dependencies": {
     "@bacons/expo-metro-runtime": "^2.0.1",
-    "@expo/webpack-config": "^0.17.2",
     "@react-native-picker/picker": "^2.4.8",
-    "expo": "~47.0.14",
-    "expo-splash-screen": "~0.17.5",
-    "expo-status-bar": "~1.4.2",
-    "react": "18.1.0",
-    "react-dom": "18.1.0",
-    "react-native": "0.70.8",
+    "expo": "~48.0.10",
+    "expo-splash-screen": "~0.18.1",
+    "expo-status-bar": "~1.4.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-native": "0.71.6",
     "react-native-web": "~0.18.9",
     "react-use-promise": "^0.5.0"
   },
   "devDependencies": {
     "@babel/core": "^7.12.9",
-    "@types/react": "~18.0.14",
-    "@types/react-native": "~0.70.6",
-    "typescript": "^4.6.3"
+    "@types/react": "~18.0.27",
+    "typescript": "^4.9.4"
   },
   "private": true,
   "expo": {
