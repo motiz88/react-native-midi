@@ -15,6 +15,7 @@ import { MidiIoContext } from "./MidiIoContext";
 type MIDILogItem = {
   dataHex: string;
   origin: string;
+  count: number;
 };
 
 export function MidiPlaygroundArea() {
@@ -23,6 +24,7 @@ export function MidiPlaygroundArea() {
     return (
       <Text style={styles.logLine}>
         <Text style={styles.origin}>{item.origin}:</Text> {item.dataHex}
+        {item.count > 1 ? ` (x${item.count})` : null}
       </Text>
     );
   }, []);
@@ -32,16 +34,34 @@ export function MidiPlaygroundArea() {
   useEffect(() => {
     if (inputPort) {
       const listener = (event: MIDIMessageEvent) => {
-        setMessages((m) =>
-          m.concat([
-            {
-              dataHex: [...event.data]
-                .map((b) => b.toString(16).toUpperCase().padStart(2, "0"))
-                .join(" "),
-              origin: inputPort.name,
-            },
-          ])
-        );
+        setMessages((m) => {
+          const incomingMessage = {
+            dataHex: [...event.data]
+              .map((b) => b.toString(16).toUpperCase().padStart(2, "0"))
+              .join(" "),
+            origin: inputPort.name,
+          };
+          if (
+            m.length > 0 &&
+            m[m.length - 1].dataHex === incomingMessage.dataHex &&
+            m[m.length - 1].origin === incomingMessage.origin
+          ) {
+            return [
+              ...m.slice(0, m.length - 1),
+              {
+                ...incomingMessage,
+                count: m[m.length - 1].count + 1,
+              },
+            ];
+          } else {
+            return m.concat([
+              {
+                ...incomingMessage,
+                count: 1,
+              },
+            ]);
+          }
+        });
         if (echoToOutput && outputPort) {
           outputPort.send(event.data);
         }
@@ -83,7 +103,11 @@ export function MidiPlaygroundArea() {
       {messages.length ? null : (
         <Text>Received MIDI messages will appear below.</Text>
       )}
-      <FlatList data={messages} renderItem={renderMessage} />
+      <FlatList
+        style={styles.messages}
+        data={messages}
+        renderItem={renderMessage}
+      />
     </>
   );
 }
@@ -106,5 +130,8 @@ const styles = StyleSheet.create({
   },
   origin: {
     color: "gray",
+  },
+  messages: {
+    flex: 1,
   },
 });
