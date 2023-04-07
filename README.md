@@ -30,7 +30,8 @@ Refer to the [Web MIDI API docs](https://developer.mozilla.org/en-US/docs/Web/AP
 > **NOTE:** This package is experimental and may not work out of the box for you. Please [file an issue](https://github.com/motiz88/react-native-midi/issues) if you encounter a problem.
 
 If using Expo: `expo install @motiz88/react-native-midi`
-Otherwise: `npm install @motiz88/react-native-midi`
+
+Otherwise, add the dependency normally with `npm install @motiz88/react-native-midi`, and follow the guide to [installing Expo modules in bare React Native projects](https://docs.expo.dev/bare/installing-expo-modules/)  (one-time setup).
 
 ## Configure for iOS
 
