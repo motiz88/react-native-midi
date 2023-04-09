@@ -47,9 +47,7 @@ public class ReactNativeMidiModule: Module {
 
     private var output: MIDIOutput?
 
-    private func openDevice(id _: Int32, promise: Promise) {
-        promise.resolve(nil)
-    }
+    private func openDevice(id _: Int32) {}
 
     private static func serializeDeviceInfo(device: MIDIDevice) -> [String: Any?] {
         return [
@@ -101,39 +99,23 @@ public class ReactNativeMidiModule: Module {
         return timeInNanoSeconds / 1_000_000.0
     }
 
-    private func openInputPort(id _: Int32, portNumber _: Int32, promise: Promise) {
-        promise.resolve(nil)
-    }
+    private func openInputPort(id _: Int32, portNumber _: Int32) {}
 
     private func closeInputPort(id _: Int32, portNumber _: Int32) {}
 
     private var openSourcePorts: [Int32: SourcePort] = [:]
 
-    private func openOutputPort(id: Int32, portNumber: Int32, promise: Promise) {
-        let doOpen = { [self] in
-            do {
-                if openSourcePorts[portNumber] == nil {
-                    let source = MIDISource.find(with: MIDIUniqueID(portNumber))
-                    openSourcePorts[portNumber] = try SourcePort(with: client!, source: source!) { data, timestamp in
-                        self.sendEvent(MIDI_MESSAGE_RECEIVED_EVENT_NAME, [
-                            "id": id,
-                            "portNumber": portNumber,
-                            "data": Array(data),
-                            "timestamp": Double(timestamp) / 1_000_000.0,
-                        ])
-                    }
-                }
-                promise.resolve(nil)
-            } catch {
-                promise.reject(error)
+    private func openOutputPort(id: Int32, portNumber: Int32) throws{
+        if openSourcePorts[portNumber] == nil {
+            let source = MIDISource.find(with: MIDIUniqueID(portNumber))
+            openSourcePorts[portNumber] = try SourcePort(with: client!, source: source!) { data, timestamp in
+                self.sendEvent(MIDI_MESSAGE_RECEIVED_EVENT_NAME, [
+                    "id": id,
+                    "portNumber": portNumber,
+                    "data": Array(data),
+                    "timestamp": Double(timestamp) / 1_000_000.0,
+                ])
             }
-        }
-        if (client != nil) {
-            doOpen()
-            return
-        } else {
-            // Assume there is a concurrent requestMidiAccess() call in progress and get in the queue behind it.
-            DispatchQueue.main.async(execute: doOpen)
         }
     }
 
@@ -141,28 +123,15 @@ public class ReactNativeMidiModule: Module {
         openSourcePorts.removeValue(forKey: portNumber)
     }
 
-    private func send(id _: Int32, portNumber: Int32, message: Uint8Array, timestamp: Double?, promise: Promise) {
-        let doSend = { [self] in
-            do {
-                let destination = MIDIDestination.find(with: MIDIUniqueID(portNumber))
-                let uint8Ptr = message.rawPointer.bindMemory(to: UInt8.self, capacity: message.length)
-                let uint8Buf = UnsafeBufferPointer(start: uint8Ptr, count: message.length)
-                // TODO: Long messages (break into multiple packets?)
-                let midiTimestamp = UInt64(((timestamp != nil) ? (timestamp! * 1_000_000.0) : 0).rounded())
-                try output!.send(
-                    bytes: Array(uint8Buf), timestamp: midiTimestamp, to: destination!
-                )
-                promise.resolve(nil)
-            } catch {
-                promise.reject(error)
-            }
-        }
-        if (output != nil) {
-            doSend()
-        } else {
-            // Assume there is a concurrent requestMidiAccess() call in progress and get in the queue behind it.
-            DispatchQueue.main.async(execute: doSend)
-        }
+    private func send(id _: Int32, portNumber: Int32, message: Uint8Array, timestamp: Double?) throws {
+        let destination = MIDIDestination.find(with: MIDIUniqueID(portNumber))
+        let uint8Ptr = message.rawPointer.bindMemory(to: UInt8.self, capacity: message.length)
+        let uint8Buf = UnsafeBufferPointer(start: uint8Ptr, count: message.length)
+        // TODO: Long messages (break into multiple packets?)
+        let midiTimestamp = UInt64(((timestamp != nil) ? (timestamp! * 1_000_000.0) : 0).rounded())
+        try output!.send(
+            bytes: Array(uint8Buf), timestamp: midiTimestamp, to: destination!
+        )
     }
 
     private func flush(id _: Int32, portNumber: Int32) throws {
@@ -173,21 +142,13 @@ public class ReactNativeMidiModule: Module {
         try destination!.flushOutput()
     }
 
-    private func requestMIDIAccess(promise: Promise) {
-        DispatchQueue.main.async { [self] in
-            do {
-                if (client != nil) {
-                    promise.resolve(true)
-                    return
-                }
-                client = try MIDIClient(name: "@motiz88/react-native-midi", callback: self.receive)
-                output = try client!.createOutput(name: "@motiz88/react-native-midi output")
-            } catch {
-                promise.reject(error)
-                return
-            }
-            promise.resolve(true)
+    private func requestMIDIAccess() throws -> Bool  {
+        if (client != nil) {
+            return true
         }
+        client = try MIDIClient(name: "@motiz88/react-native-midi", callback: self.receive)
+        output = try client!.createOutput(name: "@motiz88/react-native-midi output")
+        return true
     }
 
     public func definition() -> ModuleDefinition {
@@ -195,23 +156,23 @@ public class ReactNativeMidiModule: Module {
 
         Events(MIDI_DEVICE_ADDED_EVENT_NAME, MIDI_DEVICE_REMOVED_EVENT_NAME, MIDI_MESSAGE_RECEIVED_EVENT_NAME)
 
-        AsyncFunction("requestMIDIAccess", requestMIDIAccess)
+        Function("requestMIDIAccess", requestMIDIAccess)
 
         Function("getDevices", getDevices)
 
-        AsyncFunction("openDevice", openDevice)
+        Function("openDevice", openDevice)
 
         Function("closeDevice", closeDevice)
 
-        AsyncFunction("openInputPort", openInputPort)
+        Function("openInputPort", openInputPort)
 
         Function("closeInputPort", closeInputPort)
 
-        AsyncFunction("openOutputPort", openOutputPort)
+        Function("openOutputPort", openOutputPort)
 
         Function("closeOutputPort", closeOutputPort)
 
-        AsyncFunction("send", send)
+        Function("send", send)
 
         Function("flush", flush)
 
