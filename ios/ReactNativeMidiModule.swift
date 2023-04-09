@@ -6,21 +6,39 @@ let MIDI_DEVICE_REMOVED_EVENT_NAME = "onMidiDeviceRemoved"
 let MIDI_MESSAGE_RECEIVED_EVENT_NAME = "onMidiMessageReceived"
 
 public class ReactNativeMidiModule: Module {
+    // The set of devices we have told JS about
+    private var devices: Dictionary<MIDIUniqueID, MIDIDevice> = [:]
     
     private func addDevice(device: MIDIDevice) {
-        sendEvent(MIDI_DEVICE_ADDED_EVENT_NAME, ReactNativeMidiModule.serializeDeviceInfo(device: device))
+        if (devices.updateValue(device, forKey: device.uniqueID) == nil) {
+            sendEvent(MIDI_DEVICE_ADDED_EVENT_NAME, ReactNativeMidiModule.serializeDeviceInfo(device: device))
+        }
     }
     
     private func removeDevice(device: MIDIDevice) {
-        sendEvent(MIDI_DEVICE_REMOVED_EVENT_NAME, ["id": device.properties![MIDIObject.Property.uniqueID]])
+        if (devices.removeValue(forKey: device.uniqueID) != nil) {
+            sendEvent(MIDI_DEVICE_REMOVED_EVENT_NAME, ["id": device.uniqueID])
+        }
+    }
+    
+    private func rescanDevices() {
+        if (client == nil) {
+            return
+        }
+        for device in MIDIDevice.all {
+            if (!device.isOffline) {
+                addDevice(device: device)
+            } else {
+                removeDevice(device: device)
+            }
+        }
     }
     
     private func receive(notice: MIDINotice) {
         switch notice {
         case let .objectAdded(_, device as MIDIDevice):
             // NOTE: I haven't seen this event fire in practice with MIDIDevice as the child.
-            let offline = device.properties![MIDIObject.Property.offline] as? Int
-            if (offline == nil || offline == 0) {
+            if (!device.isOffline) {
                 addDevice(device: device)
             }
             break;
@@ -29,8 +47,7 @@ public class ReactNativeMidiModule: Module {
             removeDevice(device: device)
             break;
         case let .propertyChanged(device as MIDIDevice, MIDIObject.Property.offline):
-            let offline = device.properties![MIDIObject.Property.offline] as! Int
-            if (offline == 0) {
+            if (!device.isOffline) {
                 addDevice(device: device)
             } else {
                 removeDevice(device: device)
@@ -51,7 +68,7 @@ public class ReactNativeMidiModule: Module {
     
     private static func serializeDeviceInfo(device: MIDIDevice) -> [String: Any?] {
         return [
-            "id": device.properties![MIDIObject.Property.uniqueID],
+            "id": device.uniqueID,
             "inputPortCount": device.destinations.count,
             "outputPortCount": device.sources.count,
             "isPrivate": device.properties![MIDIObject.Property.private],
@@ -64,30 +81,36 @@ public class ReactNativeMidiModule: Module {
             "ports": device.destinations.map { port in [
                 "type": 1,
                 "name": device.properties![MIDIObject.Property.name],
-                "portNumber": port.properties![MIDIObject.Property.uniqueID],
+                "portNumber": port.uniqueID,
             ]
             } + device.sources.map { port in [
                 "type": 2,
                 "name": device.properties![MIDIObject.Property.name],
-                "portNumber": port.properties![MIDIObject.Property.uniqueID],
+                "portNumber": port.uniqueID,
             ]
             },
         ]
     }
     
+    
     private func getDevices() -> [[String: Any?]] {
-        return MIDIDevice.all
-        // iOS reports *every device ever seen* as "offline".
-        // In Web MIDI terms we interpret "offline" as "disconnected", and disconnected
-        // ports should not be listed in MIDIAccess, so just filter them out.
-            .filter {$0.properties![MIDIObject.Property.offline] as? Int != 1 }
+        devices = Dictionary(uniqueKeysWithValues: MIDIDevice.all
+                             // iOS reports *every device ever seen* as "offline".
+                             // In Web MIDI terms we interpret "offline" as "disconnected", and disconnected
+                             // ports should not be listed in MIDIAccess, so just filter them out.
+            .filter {!$0.isOffline}
+            .map { ($0.uniqueID, $0) }
+        )
+        
+        return devices
+            .values
             .map(ReactNativeMidiModule.serializeDeviceInfo)
     }
     
     private func closeDevice(id: Int32) {
         // TODO: Is this safe, or can `source` change, forcing us to do our own bookkeeping?
         MIDIDevice.find(with: id)?.sources.forEach {
-            closeOutputPort(id: id, portNumber: $0.properties![MIDIObject.Property.uniqueID] as! Int32)
+            closeOutputPort(id: id, portNumber: $0.uniqueID)
         }
     }
     
@@ -152,7 +175,9 @@ public class ReactNativeMidiModule: Module {
     }
     
     public func definition() -> ModuleDefinition {
+        
         Name("ReactNativeMidi")
+        
         
         Events(MIDI_DEVICE_ADDED_EVENT_NAME, MIDI_DEVICE_REMOVED_EVENT_NAME, MIDI_MESSAGE_RECEIVED_EVENT_NAME)
         

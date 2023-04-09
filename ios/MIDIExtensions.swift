@@ -37,6 +37,13 @@ public extension MIDIDevice {
         }
         return MIDIDevice(obj!.reference)
     }
+    
+    var isOffline: Bool {
+        get {
+            let offline = self.properties![MIDIObject.Property.offline] as? Int
+            return !(offline == nil || offline == 0)
+        }
+    }
 }
 
 public extension MIDIOutput {
@@ -48,5 +55,13 @@ public extension MIDIOutput {
             status = MIDISend(reference, destination.reference, $0)
         }
         try status.midiError("Sending packets to destination with MIDIOutput")
+    }
+}
+
+public extension MIDIObject {
+    var uniqueID: MIDIUniqueID {
+        get {
+            return self.properties![MIDIObject.Property.uniqueID] as! MIDIUniqueID
+        }
     }
 }
