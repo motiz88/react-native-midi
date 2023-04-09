@@ -12,13 +12,13 @@ import Gong
 class MidiConstants {
     /** Number of bytes in a message nc from 8c to Ec  */
     private static let CHANNEL_BYTE_LENGTHS: [Int] = [3, 3, 3, 3, 2, 2, 3]
-
+    
     /** Number of bytes in a message Fn from F0 to FF  */
     private static let SYSTEM_BYTE_LENGTHS: [Int] = [
         1, 2, 3, 2, 1, 1, 1, 1, 1,
         1, 1, 1, 1, 1, 1, 1,
     ]
-
+    
     /**
      * MIDI messages, except for SysEx, are 1,2 or 3 bytes long.
      * You can tell how long a MIDI message is from the first status byte.
@@ -41,18 +41,18 @@ class MidiConstants {
 
 public extension MIDIClient {
     typealias MutPacketCallback = (_ packet: UnsafePointer<MIDIPacket>, _ source: MIDISource) -> Void
-
+    
     func createInput2(name: String, callback: @escaping MutPacketCallback = { _, _ in }) throws -> MIDIInput {
         var portReference = MIDIPortRef()
-
+        
         let context = UnsafeMutablePointer<MutPacketCallback>.allocate(capacity: 1)
         context.initialize(to: callback)
-
+        
         let procedure: MIDIReadProc = { packetList, context, connectionContext in
             guard let callback = context?.assumingMemoryBound(to: MutPacketCallback.self).pointee else {
                 return
             }
-
+            
             guard let endpointReference = connectionContext?.assumingMemoryBound(to: MIDIEndpointRef.self).pointee else {
                 return
             }
@@ -64,7 +64,7 @@ public extension MIDIClient {
                 packet = UnsafePointer(MIDIPacketNext(packet!))
             }
         }
-
+        
         try MIDIInputPortCreate(reference, name as CFString, procedure, context, &portReference).midiError("Creating input port on MIDIClient with name \"\(name)\"")
         return MIDIInput(portReference)
     }
@@ -75,14 +75,14 @@ class SourcePort {
     private let source: MIDISource
     private var input: MIDIInput?
     private let sendSingleMessage: (ArraySlice<UInt8>, MIDITimeStamp) -> Void
-
+    
     private var mBuffer: [UInt8] = [0, 0, 0]
     private var mSysExBuffer: [UInt8] = []
     private var mCount = 0
     private var mRunningStatus: UInt8 = 0
     private var mNeeded = 0
     private var mInSysEx = false
-
+    
     private func receive(_ packet: UnsafePointer<MIDIPacket>, from _: MIDISource) {
         let count = Int(packet.pointee.length)
         let data = packet.pointer(to: \.data)!.withMemoryRebound(to: UInt8.self, capacity: count) {
@@ -158,7 +158,7 @@ class SourcePort {
             mSysExBuffer.append(contentsOf: data[sysExStartOffset ..< offset])
         }
     }
-
+    
     init(with client: MIDIClient, source: MIDISource, sendSingleMessage: @escaping (ArraySlice<UInt8>, MIDITimeStamp) -> Void) throws {
         self.client = client
         self.source = source
@@ -166,7 +166,7 @@ class SourcePort {
         input = try client.createInput2(name: "Default input", callback: receive)
         try input!.connect(self.source)
     }
-
+    
     deinit {
         do {
             try self.input?.disconnect(self.source)

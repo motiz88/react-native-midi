@@ -6,15 +6,15 @@ let MIDI_DEVICE_REMOVED_EVENT_NAME = "onMidiDeviceRemoved"
 let MIDI_MESSAGE_RECEIVED_EVENT_NAME = "onMidiMessageReceived"
 
 public class ReactNativeMidiModule: Module {
-
+    
     private func addDevice(device: MIDIDevice) {
         sendEvent(MIDI_DEVICE_ADDED_EVENT_NAME, ReactNativeMidiModule.serializeDeviceInfo(device: device))
     }
-
+    
     private func removeDevice(device: MIDIDevice) {
         sendEvent(MIDI_DEVICE_REMOVED_EVENT_NAME, ["id": device.properties![MIDIObject.Property.uniqueID]])
     }
-
+    
     private func receive(notice: MIDINotice) {
         switch notice {
         case let .objectAdded(_, device as MIDIDevice):
@@ -36,19 +36,19 @@ public class ReactNativeMidiModule: Module {
                 removeDevice(device: device)
             }
             break;
-        // TODO: Handle other property changes?
-        // TODO: Handle individual endpoints being added/removed?
+            // TODO: Handle other property changes?
+            // TODO: Handle individual endpoints being added/removed?
         default:
             break
         }
     }
-
+    
     private var client: MIDIClient?
-
+    
     private var output: MIDIOutput?
-
+    
     private func openDevice(id _: Int32) {}
-
+    
     private static func serializeDeviceInfo(device: MIDIDevice) -> [String: Any?] {
         return [
             "id": device.properties![MIDIObject.Property.uniqueID],
@@ -74,23 +74,23 @@ public class ReactNativeMidiModule: Module {
             },
         ]
     }
-
+    
     private func getDevices() -> [[String: Any?]] {
         return MIDIDevice.all
-            // iOS reports *every device ever seen* as "offline".
-            // In Web MIDI terms we interpret "offline" as "disconnected", and disconnected
-            // ports should not be listed in MIDIAccess, so just filter them out.
+        // iOS reports *every device ever seen* as "offline".
+        // In Web MIDI terms we interpret "offline" as "disconnected", and disconnected
+        // ports should not be listed in MIDIAccess, so just filter them out.
             .filter {$0.properties![MIDIObject.Property.offline] as? Int != 1 }
             .map(ReactNativeMidiModule.serializeDeviceInfo)
     }
-
+    
     private func closeDevice(id: Int32) {
         // TODO: Is this safe, or can `source` change, forcing us to do our own bookkeeping?
         MIDIDevice.find(with: id)?.sources.forEach {
             closeOutputPort(id: id, portNumber: $0.properties![MIDIObject.Property.uniqueID] as! Int32)
         }
     }
-
+    
     private static func getMilliTime() -> Double {
         let time = mach_absolute_time()
         var timeBaseInfo = mach_timebase_info_data_t()
@@ -98,13 +98,13 @@ public class ReactNativeMidiModule: Module {
         let timeInNanoSeconds = Double(time) * Double(timeBaseInfo.numer) / Double(timeBaseInfo.denom)
         return timeInNanoSeconds / 1_000_000.0
     }
-
+    
     private func openInputPort(id _: Int32, portNumber _: Int32) {}
-
+    
     private func closeInputPort(id _: Int32, portNumber _: Int32) {}
-
+    
     private var openSourcePorts: [Int32: SourcePort] = [:]
-
+    
     private func openOutputPort(id: Int32, portNumber: Int32) throws{
         if openSourcePorts[portNumber] == nil {
             let source = MIDISource.find(with: MIDIUniqueID(portNumber))
@@ -118,11 +118,11 @@ public class ReactNativeMidiModule: Module {
             }
         }
     }
-
+    
     private func closeOutputPort(id _: Int32, portNumber: Int32) {
         openSourcePorts.removeValue(forKey: portNumber)
     }
-
+    
     private func send(id _: Int32, portNumber: Int32, message: Uint8Array, timestamp: Double?) throws {
         let destination = MIDIDestination.find(with: MIDIUniqueID(portNumber))
         let uint8Ptr = message.rawPointer.bindMemory(to: UInt8.self, capacity: message.length)
@@ -133,7 +133,7 @@ public class ReactNativeMidiModule: Module {
             bytes: Array(uint8Buf), timestamp: midiTimestamp, to: destination!
         )
     }
-
+    
     private func flush(id _: Int32, portNumber: Int32) throws {
         // TODO: "The implementation will need to ensure the MIDI stream is left in a good state,
         // so if the output port is in the middle of a sysex message, a sysex termination byte (0xf7)
@@ -141,7 +141,7 @@ public class ReactNativeMidiModule: Module {
         let destination = MIDIDestination.find(with: MIDIUniqueID(portNumber))
         try destination!.flushOutput()
     }
-
+    
     private func requestMIDIAccess() throws -> Bool  {
         if (client != nil) {
             return true
@@ -150,32 +150,32 @@ public class ReactNativeMidiModule: Module {
         output = try client!.createOutput(name: "@motiz88/react-native-midi output")
         return true
     }
-
+    
     public func definition() -> ModuleDefinition {
         Name("ReactNativeMidi")
-
+        
         Events(MIDI_DEVICE_ADDED_EVENT_NAME, MIDI_DEVICE_REMOVED_EVENT_NAME, MIDI_MESSAGE_RECEIVED_EVENT_NAME)
-
+        
         Function("requestMIDIAccess", requestMIDIAccess)
-
+        
         Function("getDevices", getDevices)
-
+        
         Function("openDevice", openDevice)
-
+        
         Function("closeDevice", closeDevice)
-
+        
         Function("openInputPort", openInputPort)
-
+        
         Function("closeInputPort", closeInputPort)
-
+        
         Function("openOutputPort", openOutputPort)
-
+        
         Function("closeOutputPort", closeOutputPort)
-
+        
         Function("send", send)
-
+        
         Function("flush", flush)
-
+        
         Function("getMilliTime", ReactNativeMidiModule.getMilliTime)
     }
 }
