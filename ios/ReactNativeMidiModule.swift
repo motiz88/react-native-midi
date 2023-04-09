@@ -142,7 +142,8 @@ public class ReactNativeMidiModule: Module {
     }
 
     private func send(id _: Int32, portNumber: Int32, message: Uint8Array, timestamp: Double?, promise: Promise) {
-        let doSend = { [self] in
+        // AsyncFunction executes on a different thread, and we must be on the main thread to access `message` and `output`
+        DispatchQueue.main.async { [self] in
             do {
                 let destination = MIDIDestination.find(with: MIDIUniqueID(portNumber))
                 let uint8Ptr = message.rawPointer.bindMemory(to: UInt8.self, capacity: message.length)
@@ -156,12 +157,6 @@ public class ReactNativeMidiModule: Module {
             } catch {
                 promise.reject(error)
             }
-        }
-        if (output != nil) {
-            doSend()
-        } else {
-            // Assume there is a concurrent requestMidiAccess() call in progress and get in the queue behind it.
-            DispatchQueue.main.async(execute: doSend)
         }
     }
 
