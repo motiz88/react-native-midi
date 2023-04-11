@@ -1,6 +1,6 @@
 {
   "name": "@motiz88/react-native-midi",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": false,
   "publishConfig": {
     "access": "public"
