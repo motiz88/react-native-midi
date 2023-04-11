@@ -6,7 +6,6 @@ import android.media.midi.*
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.os.bundleOf
 import expo.modules.kotlin.Promise
@@ -63,9 +62,9 @@ class ReactNativeMidiModule : Module() {
 
     override fun definition() = ModuleDefinition {
         Events(
-            MIDI_DEVICE_ADDED_EVENT_NAME,
-            MIDI_DEVICE_REMOVED_EVENT_NAME,
-            MIDI_MESSAGE_RECEIVED_EVENT_NAME,
+                MIDI_DEVICE_ADDED_EVENT_NAME,
+                MIDI_DEVICE_REMOVED_EVENT_NAME,
+                MIDI_MESSAGE_RECEIVED_EVENT_NAME,
         )
 
         OnStartObserving {
@@ -115,9 +114,10 @@ class ReactNativeMidiModule : Module() {
             closeOutputPort(id, portNumber)
         }
 
-        AsyncFunction("send") { id: Int, portNumber: Int, data: Uint8Array, timestamp: Double?,
-                                promise: Promise ->
-            send(id, portNumber, data, timestamp, promise.butFirst { })
+        Function("send") { id: Int, portNumber: Int, data: Uint8Array, timestamp: Double? ->
+            val bytes = ByteArray(data.byteLength)
+            data.toDirectBuffer().get(bytes)
+            send(id, portNumber, bytes, timestamp)
         }
 
         Function("flush") { id: Int, portNumber: Int ->
@@ -151,25 +151,25 @@ class ReactNativeMidiModule : Module() {
     }
 
     private fun serializeDeviceInfo(device: MidiDeviceInfo) = bundleOf(
-        "id" to device.id,
-        "inputPortCount" to device.inputPortCount,
-        "outputPortCount" to device.outputPortCount,
-        "isPrivate" to device.isPrivate,
-        "properties" to bundleOf(
-            "manufacturer" to device.properties.get("manufacturer"),
-            "name" to device.properties.get("name"),
-            "product" to device.properties.get("product"),
-            "serial_number" to device.properties.get("serial_number"),
-            "version" to device.properties.get("version"),
-        ),
-        "type" to device.type,
-        "ports" to device.ports.map { port ->
-            bundleOf(
-                "type" to port.type,
-                "name" to port.name,
-                "portNumber" to port.portNumber,
-            )
-        }
+            "id" to device.id,
+            "inputPortCount" to device.inputPortCount,
+            "outputPortCount" to device.outputPortCount,
+            "isPrivate" to device.isPrivate,
+            "properties" to bundleOf(
+                    "manufacturer" to device.properties.get("manufacturer"),
+                    "name" to device.properties.get("name"),
+                    "product" to device.properties.get("product"),
+                    "serial_number" to device.properties.get("serial_number"),
+                    "version" to device.properties.get("version"),
+            ),
+            "type" to device.type,
+            "ports" to device.ports.map { port ->
+                bundleOf(
+                        "type" to port.type,
+                        "name" to port.name,
+                        "portNumber" to port.portNumber,
+                )
+            }
     )
 
     private fun closeOutputPort(id: Int, portNumber: Int) {
@@ -199,9 +199,9 @@ class ReactNativeMidiModule : Module() {
         val key = Pair(id, portNumber)
         if (!openInputPorts.containsKey(key)) {
             val port = device.openInputPort(portNumber) ?: throw CodedException(
-                "INVALID_ACCESS_ERROR",
-                "Failed to open MIDI port",
-                null
+                    "INVALID_ACCESS_ERROR",
+                    "Failed to open MIDI port",
+                    null
             )
             openInputPorts[key] = port
         }
@@ -223,23 +223,23 @@ class ReactNativeMidiModule : Module() {
         val key = Pair(id, portNumber)
         if (!openOutputPorts.containsKey(key)) {
             val port = device.openOutputPort(portNumber) ?: throw CodedException(
-                "INVALID_ACCESS_ERROR",
-                "Failed to open MIDI port",
-                null
+                    "INVALID_ACCESS_ERROR",
+                    "Failed to open MIDI port",
+                    null
             )
 
             port.connect(MidiFramer(object : MidiReceiver() {
                 override fun onSend(msg: ByteArray, offset: Int, count: Int, timestamp: Long) {
                     this@ReactNativeMidiModule.sendEvent(
-                        MIDI_MESSAGE_RECEIVED_EVENT_NAME,
-                        bundleOf(
-                            "id" to id,
-                            "portNumber" to portNumber,
-                            // TODO: OMG no, pass an actual byte array with no copying
-                            "data" to msg.slice(offset until offset + count)
-                                .map { it.toInt() }.toIntArray(),
-                            "timestamp" to timestamp / 1000000.0
-                        )
+                            MIDI_MESSAGE_RECEIVED_EVENT_NAME,
+                            bundleOf(
+                                    "id" to id,
+                                    "portNumber" to portNumber,
+                                    // TODO: OMG no, pass an actual byte array with no copying
+                                    "data" to msg.slice(offset until offset + count)
+                                            .map { it.toInt() }.toIntArray(),
+                                    "timestamp" to timestamp / 1000000.0
+                            )
                     )
                 }
             }))
@@ -249,35 +249,13 @@ class ReactNativeMidiModule : Module() {
     }
 
     private fun send(
-        id: Int,
-        portNumber: Int,
-        data: Uint8Array,
-        timestamp: Double?,
-        promise: Promise
-    ) {
-        val key = Pair(id, portNumber)
-        if (openInputPorts.containsKey(key)) {
-            promise.resolveUsing { send(id, portNumber, data, timestamp) }
-        } else {
-            openInputPort(
-                id,
-                portNumber,
-                promise.butFirst {
-                    send(id, portNumber, data, timestamp)
-                })
-        }
-    }
-
-    private fun send(
-        id: Int,
-        portNumber: Int,
-        data: Uint8Array,
-        timestamp: Double?
+            id: Int,
+            portNumber: Int,
+            bytes: ByteArray,
+            timestamp: Double?
     ) {
         val key = Pair(id, portNumber)
         val port = openInputPorts[key]!!
-        val bytes = ByteArray(data.byteLength)
-        data.toDirectBuffer().get(bytes)
         port.send(bytes, 0, bytes.size, ((timestamp ?: 0.0) * 1000000.0).toLong())
     }
 
@@ -292,16 +270,16 @@ class ReactNativeMidiModule : Module() {
     private val deviceListener = object : MidiManager.DeviceCallback() {
         override fun onDeviceAdded(device: MidiDeviceInfo) {
             this@ReactNativeMidiModule.sendEvent(
-                MIDI_DEVICE_ADDED_EVENT_NAME,
-                serializeDeviceInfo(device)
+                    MIDI_DEVICE_ADDED_EVENT_NAME,
+                    serializeDeviceInfo(device)
             )
         }
 
         override fun onDeviceRemoved(device: MidiDeviceInfo) {
             closeDeviceById(device.id)
             this@ReactNativeMidiModule.sendEvent(
-                MIDI_DEVICE_REMOVED_EVENT_NAME,
-                bundleOf("id" to device.id)
+                    MIDI_DEVICE_REMOVED_EVENT_NAME,
+                    bundleOf("id" to device.id)
             )
         }
     }
